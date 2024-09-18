@@ -6,7 +6,7 @@ A simplified version of pb edge detection, which finds boundaries by examining b
 This repository contains an implementation of a simple version of the Probability-Based (PB) boundary detection algorithm. Unlike classical approaches like Canny and Sobel, which only measure image intensity discontinuities, the PB algorithm also considers texture and color information, resulting in improved performance in edge detection.
 
 ## Sample Input Image
-![Sample Input](https://github.com/pvrohin/RBE549-Alohomora/Phase1/BSDS500/Images/1.jpg)
+![Sample Input](https://github.com/pvrohin/RBE549-Alohomora/blob/master/Phase1/BSDS500/Images/1.jpg)
 
 ## Filter Banks
 Filter banks are a set of filters applied over an image to extract multiple features. In this project, filter banks were used to extract texture properties. Below are the implementations of DoG filters, Leung-Malik filters, and Gabor filters.
