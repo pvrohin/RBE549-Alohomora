@@ -21,6 +21,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import imutils
 import math
+import os
+import glob
 import cv2
 
 def Gaussian_1D(scale=1,size=7):
@@ -455,7 +457,6 @@ def calc_gradient(image,halfDiskBank):
 	return gradient_mean			
 
 def main():
-
 	"""
 	Generate Difference of Gaussian Filter Bank: (DoG)
 	Display all the filters in this filter bank and save image as DoG.png,
@@ -466,17 +467,17 @@ def main():
 	orientations = 16
 	DoG_filter_bank = DoG(size,scales,orientations)
 
-	# print(np.shape(DoG_filter_bank))
+	# Save DoG filter bank
+	fig1 = plt.figure(figsize=(20, 4))
+	for i in range(1, len(scales)*orientations+1):
+		ax = fig1.add_subplot(2, 16, i)			
+		plt.imshow(DoG_filter_bank[:,:,i-1], interpolation='none', cmap='gray')
+		ax.set_xticks([])
+		ax.set_yticks([])
 
-	# fig1 = plt.figure()
-	# for i in range(1, len(scales)*orientations+1):
-	# 	ax = fig1.add_subplot(2, 16, i)			
-	# 	plt.imshow(DoG_filter_bank[:,:,i-1], interpolation='none', cmap='gray')
-	# 	ax.set_xticks([])
-	# 	ax.set_yticks([])
-
-	# fig1.suptitle("DoG Filter Bank", fontsize=20)
-	# plt.savefig('../Output/DoG.png')
+	fig1.suptitle("DoG Filter Bank", fontsize=20)
+	plt.savefig('../Output/DoG.png', dpi=150, bbox_inches='tight')
+	plt.close()
 
 	"""
 	Generate Leung-Malik Filter Bank: (LM)
@@ -486,16 +487,17 @@ def main():
 
 	lm_FilterBank = LM_FilterBank()
 
-	# fig1 = plt.figure()
-	# for i in range(1, 49):
-	# 	ax = fig1.add_subplot(4, 12, i)			
-	# 	plt.imshow(lm_FilterBank[:,:,i-1], interpolation='none', cmap='gray')
-	# 	ax.set_xticks([])
-	# 	ax.set_yticks([])
+	# Save LM filter bank
+	fig1 = plt.figure(figsize=(20, 8))
+	for i in range(1, 49):
+		ax = fig1.add_subplot(4, 12, i)			
+		plt.imshow(lm_FilterBank[:,:,i-1], interpolation='none', cmap='gray')
+		ax.set_xticks([])
+		ax.set_yticks([])
 
-	# fig1.suptitle("LM Filter Bank", fontsize=20)
-	# plt.savefig('../Output/LM.png')
-
+	fig1.suptitle("LM Filter Bank", fontsize=20)
+	plt.savefig('../Output/LM.png', dpi=150, bbox_inches='tight')
+	plt.close()
 
 	"""
 	Generate Gabor Filter Bank: (Gabor)
@@ -504,15 +506,17 @@ def main():
 	"""
 	Gabor_FilterBank = gabor_FilterBank()
 
-	# fig1 = plt.figure()
-	# for i in range(1, 41):
-	# 	ax = fig1.add_subplot(5, 8, i)			
-	# 	plt.imshow(Gabor_FilterBank[:,:,i-1], interpolation='none', cmap='gray')
-	# 	ax.set_xticks([])
-	# 	ax.set_yticks([])
+	# Save Gabor filter bank
+	fig1 = plt.figure(figsize=(20, 12))
+	for i in range(1, 41):
+		ax = fig1.add_subplot(5, 8, i)			
+		plt.imshow(Gabor_FilterBank[:,:,i-1], interpolation='none', cmap='gray')
+		ax.set_xticks([])
+		ax.set_yticks([])
 
-	# fig1.suptitle("Gabor Filter Bank", fontsize=20)
-	# plt.savefig('../Output/Gabor.png')
+	fig1.suptitle("Gabor Filter Bank", fontsize=20)
+	plt.savefig('../Output/Gabor.png', dpi=150, bbox_inches='tight')
+	plt.close()
 
 	"""
 	Generate Half-disk masks
@@ -521,90 +525,221 @@ def main():
 	"""
 
 	Half_disk_mask = half_disk_mask()
-	# fig1 = plt.figure()
-	# for i in range(1, len(Half_disk_mask)+1):
-	# 	ax = fig1.add_subplot(6, 8, i)			
-	# 	plt.imshow(Half_disk_mask[i-1], interpolation='none', cmap='gray')
-	# 	ax.set_xticks([])
-	# 	ax.set_yticks([])
+	
+	# Save half-disk masks
+	fig1 = plt.figure(figsize=(20, 15))
+	for i in range(1, len(Half_disk_mask)+1):
+		ax = fig1.add_subplot(6, 8, i)			
+		plt.imshow(Half_disk_mask[i-1], interpolation='none', cmap='gray')
+		ax.set_xticks([])
+		ax.set_yticks([])
 
-	# fig1.suptitle("Half Disk Bank", fontsize=20)
-	# plt.savefig('../Output/HD.png')
+	fig1.suptitle("Half Disk Bank", fontsize=20)
+	plt.savefig('../Output/HD.png', dpi=150, bbox_inches='tight')
+	plt.close()
 
-	"""
-	Generate Texton Map
-	Filter image using oriented gaussian filter bank
-	"""
-	path = '../BSDS500/Images/7.jpg'
-	image = cv2.imread(path)
-	imageGray = image[:,:,0]	
-	texton_map = TextonMap(imageGray,DoG_filter_bank,lm_FilterBank,Gabor_FilterBank)	
+	# Get all image files from the Images folder
+	image_folder = '../BSDS500/Images/'
+	image_files = sorted(glob.glob(os.path.join(image_folder, '*.jpg')))
+	
+	print(f"Found {len(image_files)} images to process:")
+	for img_file in image_files:
+		print(f"  - {os.path.basename(img_file)}")
 
-	"""
-	Generate texture ID's using K-means clustering
-	Display texton map and save image as TextonMap_ImageName.png,
-	use command "cv2.imwrite('...)"
-	"""
+	# Process each image
+	for img_file in image_files:
+		# Extract image number from filename (e.g., "7.jpg" -> "7")
+		img_name = os.path.splitext(os.path.basename(img_file))[0]
+		
+		print(f"\nProcessing image {img_name}...")
+		
+		# Create output folder for this image
+		output_folder = f'../Output/{img_name}/'
+		os.makedirs(output_folder, exist_ok=True)
+		
+		# Load image
+		image = cv2.imread(img_file)
+		if image is None:
+			print(f"Warning: Could not load image {img_file}")
+			continue
+			
+		imageGray = image[:,:,0]	
+		
+		"""
+		Generate Texton Map
+		Filter image using oriented gaussian filter bank
+		"""
+		texton_map = TextonMap(imageGray, DoG_filter_bank, lm_FilterBank, Gabor_FilterBank)	
 
+		"""
+		Generate texture ID's using K-means clustering
+		Display texton map and save image as TextonMap_ImageName.png,
+		use command "cv2.imwrite('...)"
+		"""
+		# Save texton map
+		plt.figure(figsize=(10, 8))
+		plt.imshow(texton_map, cmap='tab20')
+		plt.title(f'Texton Map - Image {img_name}')
+		plt.axis('off')
+		plt.savefig(f'{output_folder}TextonMap_{img_name}.png', dpi=150, bbox_inches='tight')
+		plt.close()
 
-	"""
-	Generate Texton Gradient (Tg)
-	Perform Chi-square calculation on Texton Map
-	Display Tg and save image as Tg_ImageName.png,
-	use command "cv2.imwrite(...)"
-	"""
-	tg = calc_gradient(texton_map,Half_disk_mask)
+		"""
+		Generate Texton Gradient (Tg)
+		Perform Chi-square calculation on Texton Map
+		Display Tg and save image as Tg_ImageName.png,
+		use command "cv2.imwrite(...)"
+		"""
+		tg = calc_gradient(texton_map, Half_disk_mask)
+		
+		# Save texton gradient
+		plt.figure(figsize=(10, 8))
+		plt.imshow(tg, cmap='gray')
+		plt.title(f'Texton Gradient (Tg) - Image {img_name}')
+		plt.axis('off')
+		plt.savefig(f'{output_folder}Tg_{img_name}.png', dpi=150, bbox_inches='tight')
+		plt.close()
 
-	"""
-	Generate Brightness Map
-	Perform brightness binning 
-	"""
-	brightness_map = BrightnessMap(imageGray)
+		"""
+		Generate Brightness Map
+		Perform brightness binning 
+		"""
+		brightness_map = BrightnessMap(imageGray)
+		
+		# Save brightness map
+		plt.figure(figsize=(10, 8))
+		plt.imshow(brightness_map, cmap='tab20')
+		plt.title(f'Brightness Map - Image {img_name}')
+		plt.axis('off')
+		plt.savefig(f'{output_folder}BrightnessMap_{img_name}.png', dpi=150, bbox_inches='tight')
+		plt.close()
 
-	"""
-	Generate Brightness Gradient (Bg)
-	Perform Chi-square calculation on Brightness Map
-	Display Bg and save image as Bg_ImageName.png,
-	use command "cv2.imwrite(...)"
-	"""
-	bg = calc_gradient(brightness_map,Half_disk_mask)
+		"""
+		Generate Brightness Gradient (Bg)
+		Perform Chi-square calculation on Brightness Map
+		Display Bg and save image as Bg_ImageName.png,
+		use command "cv2.imwrite(...)"
+		"""
+		bg = calc_gradient(brightness_map, Half_disk_mask)
+		
+		# Save brightness gradient
+		plt.figure(figsize=(10, 8))
+		plt.imshow(bg, cmap='gray')
+		plt.title(f'Brightness Gradient (Bg) - Image {img_name}')
+		plt.axis('off')
+		plt.savefig(f'{output_folder}Bg_{img_name}.png', dpi=150, bbox_inches='tight')
+		plt.close()
 
-	"""
-	Generate Color Map
-	Perform color binning or clustering
-	"""
-	color_map = ColorMap(image)
+		"""
+		Generate Color Map
+		Perform color binning or clustering
+		"""
+		color_map = ColorMap(image)
+		
+		# Save color map
+		plt.figure(figsize=(10, 8))
+		plt.imshow(color_map, cmap='tab20')
+		plt.title(f'Color Map - Image {img_name}')
+		plt.axis('off')
+		plt.savefig(f'{output_folder}ColorMap_{img_name}.png', dpi=150, bbox_inches='tight')
+		plt.close()
 
-	"""
-	Generate Color Gradient (Cg)
-	Perform Chi-square calculation on Color Map
-	Display Cg and save image as Cg_ImageName.png,
-	use command "cv2.imwrite(...)"
-	"""
-	cg = calc_gradient(color_map,Half_disk_mask)
+		"""
+		Generate Color Gradient (Cg)
+		Perform Chi-square calculation on Color Map
+		Display Cg and save image as Cg_ImageName.png,
+		use command "cv2.imwrite(...)"
+		"""
+		cg = calc_gradient(color_map, Half_disk_mask)
+		
+		# Save color gradient
+		plt.figure(figsize=(10, 8))
+		plt.imshow(cg, cmap='gray')
+		plt.title(f'Color Gradient (Cg) - Image {img_name}')
+		plt.axis('off')
+		plt.savefig(f'{output_folder}Cg_{img_name}.png', dpi=150, bbox_inches='tight')
+		plt.close()
 
-	"""
-	Read Sobel Baseline
-	use command "cv2.imread(...)"
-	"""
-	sobel_path = '../BSDS500/SobelBaseline/7.png'
-	sobel_baseline = cv2.imread(sobel_path,0)
+		"""
+		Read Sobel Baseline
+		use command "cv2.imread(...)"
+		"""
+		sobel_path = f'../BSDS500/SobelBaseline/{img_name}.png'
+		sobel_baseline = cv2.imread(sobel_path, 0)
+		
+		if sobel_baseline is not None:
+			# Save Sobel baseline
+			plt.figure(figsize=(10, 8))
+			plt.imshow(sobel_baseline, cmap='gray')
+			plt.title(f'Sobel Baseline - Image {img_name}')
+			plt.axis('off')
+			plt.savefig(f'{output_folder}SobelBaseline_{img_name}.png', dpi=150, bbox_inches='tight')
+			plt.close()
+		else:
+			print(f"Warning: Could not load Sobel baseline for image {img_name}")
 
-	"""
-	Read Canny Baseline
-	use command "cv2.imread(...)"
-	"""
-	canny_path = '../BSDS500/CannyBaseline/7.png'
-	canny_baseline = cv2.imread(canny_path,0)
+		"""
+		Read Canny Baseline
+		use command "cv2.imread(...)"
+		"""
+		canny_path = f'../BSDS500/CannyBaseline/{img_name}.png'
+		canny_baseline = cv2.imread(canny_path, 0)
+		
+		if canny_baseline is not None:
+			# Save Canny baseline
+			plt.figure(figsize=(10, 8))
+			plt.imshow(canny_baseline, cmap='gray')
+			plt.title(f'Canny Baseline - Image {img_name}')
+			plt.axis('off')
+			plt.savefig(f'{output_folder}CannyBaseline_{img_name}.png', dpi=150, bbox_inches='tight')
+			plt.close()
+		else:
+			print(f"Warning: Could not load Canny baseline for image {img_name}")
 
-	"""
-	Combine responses to get pb-lite output
-	Display PbLite and save image as PbLite_ImageName.png
-	use command "cv2.imwrite(...)"
-	"""
-	pb = np.multiply(((tg+bg+cg)/3),((0.5*sobel_baseline)+(0.5*canny_baseline)))
-	plt.imshow(pb,cmap='gray')
-	plt.show()
+		"""
+		Combine responses to get pb-lite output
+		Display PbLite and save image as PbLite_ImageName.png
+		use command "cv2.imwrite(...)"
+		"""
+		if sobel_baseline is not None and canny_baseline is not None:
+			pb = np.multiply(((tg+bg+cg)/3), ((0.5*sobel_baseline)+(0.5*canny_baseline)))
+			
+			# Save final Pb-Lite output
+			plt.figure(figsize=(10, 8))
+			plt.imshow(pb, cmap='gray')
+			plt.title(f'Pb-Lite Edge Detection Result - Image {img_name}')
+			plt.axis('off')
+			plt.savefig(f'{output_folder}PbLite_{img_name}.png', dpi=150, bbox_inches='tight')
+			plt.close()
+		else:
+			print(f"Warning: Skipping Pb-Lite computation for image {img_name} due to missing baseline files")
+		
+		# Also save the original image for reference
+		plt.figure(figsize=(10, 8))
+		plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+		plt.title(f'Original Image - {img_name}')
+		plt.axis('off')
+		plt.savefig(f'{output_folder}Original_{img_name}.png', dpi=150, bbox_inches='tight')
+		plt.close()
+		
+		# Save grayscale version
+		plt.figure(figsize=(10, 8))
+		plt.imshow(imageGray, cmap='gray')
+		plt.title(f'Grayscale Image - {img_name}')
+		plt.axis('off')
+		plt.savefig(f'{output_folder}Grayscale_{img_name}.png', dpi=150, bbox_inches='tight')
+		plt.close()
+		
+		print(f"Completed processing image {img_name}. Outputs saved to {output_folder}")
+	
+	print("\n" + "="*60)
+	print("PROCESSING COMPLETE!")
+	print("="*60)
+	print("All outputs have been saved:")
+	print("- Filter banks: DoG.png, LM.png, Gabor.png, HD.png (in main Output folder)")
+	print("- Individual image results: Each image has its own numbered folder (1/, 2/, ..., 10/)")
+	print("  containing all maps, gradients, baselines, and final Pb-Lite results.")
+	print("="*60)
 
 
 if __name__ == '__main__':
