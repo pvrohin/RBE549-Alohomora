@@ -61,7 +61,7 @@ def SetupAll(BasePath, CheckPointPath):
     # Number of classes
     NumClasses = 10
 
-    return DirNamesTrain, SaveCheckPoint, ImageSize, NumTrainSamples, TrainLabels, NumClasses
+    return SaveCheckPoint, ImageSize, NumTrainSamples, TrainLabels, NumClasses
 
 def ReadLabels(LabelsPathTrain):
     if(not (os.path.isfile(LabelsPathTrain))):

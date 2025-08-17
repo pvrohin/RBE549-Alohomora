@@ -47,6 +47,8 @@ from Misc.DataUtils import *
 # Don't generate pyc codes
 sys.dont_write_bytecode = True
 
+device = "mps" if torch.backends.mps.is_available() else "cpu"
+
 def SetupAll():
     """
     Outputs:
@@ -75,8 +77,14 @@ def ReadImages(Img):
         # OpenCV returns empty list if image is not read! 
         print('ERROR: Image I1 cannot be read')
         sys.exit()
+    
+    # Convert tensor to numpy if needed
+    if torch.is_tensor(I1):
+        I1_np = I1.numpy()
+    else:
+        I1_np = I1
         
-    I1S = StandardizeInputs(np.float32(I1))
+    I1S = StandardizeInputs(np.float32(I1_np))
 
     I1Combined = np.expand_dims(I1S, axis=0)
 
@@ -134,7 +142,7 @@ def ConfusionMatrix(LabelsTrue, LabelsPred):
     print('Accuracy: '+ str(Accuracy(LabelsPred, LabelsTrue)), '%')
 
 
-def TestOperation(ImageSize, ModelPath, TestSet, LabelsPathPred):
+def TestOperation(ImageSize, ModelPath, TestSet, LabelsPathPred, ModelNum):
     """
     Inputs: 
     ImageSize is the size of the image
@@ -145,22 +153,37 @@ def TestOperation(ImageSize, ModelPath, TestSet, LabelsPathPred):
     Predictions written to /content/data/TxtFiles/PredOut.txt
     """
     # Predict output with forward pass, MiniBatchSize for Test is 1
-    model = CIFAR10Model(InputSize=3*32*32,OutputSize=10) 
-    
+    model = CIFAR10Model(InputSize=3*32*32,OutputSize=10, ModelNum=ModelNum) 
     CheckPoint = torch.load(ModelPath)
     model.load_state_dict(CheckPoint['model_state_dict'])
+    model.to(device)
+    total_params = sum(p.numel() for p in model.parameters())
+    print(f'Total number of parameters: {total_params}')
+
     print('Number of parameters in this model are %d ' % len(model.state_dict().items()))
     
     OutSaveT = open(LabelsPathPred, 'w')
 
-    for count in tqdm(range(len(TestSet))): 
-        Img, Label = TestSet[count]
-        Img, ImgOrg = ReadImages(Img)
-        Img = torch.Tensor(Img)
-        PredT = torch.argmax(model(Img)).item()
+    model.eval()
+    inference_time = None
 
-        OutSaveT.write(str(PredT)+'\n')
+    with torch.no_grad():
+        for count in tqdm(range(len(TestSet))): 
+            Img, Label = TestSet[count]
+            Img, ImgOrg = ReadImages(Img)
+            # Convert numpy array to tensor and move to device
+            Img = torch.from_numpy(Img).float().to(device)
+            if count == 100:
+                start_time = time.time()
+            PredT = torch.argmax(model(Img)).item()
+            if count == 100:
+                end_time = time.time()
+                inference_time = end_time - start_time
+                print(f"Inference time: {inference_time} seconds")
+            OutSaveT.write(str(PredT)+'\n')
     OutSaveT.close()
+
+    print(f"Inference time: {inference_time} seconds")
 
        
 def main():
@@ -173,25 +196,38 @@ def main():
 
     # Parse Command Line arguments
     Parser = argparse.ArgumentParser()
-    Parser.add_argument('--ModelPath', dest='ModelPath', default='../Checkpoints/99model.ckpt', help='Path to load latest model from, Default:ModelPath')
+    Parser.add_argument('--ModelPath', dest='ModelPath', default='./Checkpoints/Model0/19model.ckpt', help='Path to load latest model from, Default:ModelPath')
     Parser.add_argument('--LabelsPath', dest='LabelsPath', default='./TxtFiles/LabelsTest.txt', help='Path of labels file, Default:./TxtFiles/LabelsTest.txt')
     Args = Parser.parse_args()
     ModelPath = Args.ModelPath
     LabelsPath = Args.LabelsPath
     #TestSet = CIFAR10(root='data/', train=False)
+    TrainSet = torchvision.datasets.CIFAR10(root='./data', train=True,
+                                        download=True, transform=transforms.ToTensor())
     TestSet = torchvision.datasets.CIFAR10(root='./data', train=False,
                                         download=True, transform=transforms.ToTensor())
+
+    ModelNum = int(ModelPath.split('/')[-2][-1])
     
     # Setup all needed parameters including file reading
     ImageSize = SetupAll()
 
     # Define PlaceHolder variables for Predicted output
-    LabelsPathPred = './TxtFiles/PredOut.txt' # Path to save predicted labels
+    LabelsPathPred_test = './TxtFiles/PredOut_test.txt' # Path to save predicted labels
+    LabelsPath_test='./TxtFiles/LabelsTest.txt'
 
-    TestOperation(ImageSize, ModelPath, TestSet, LabelsPathPred)
+    LabelsPathPred_train = './TxtFiles/PredOut_train.txt' # Path to save predicted labels
+    LabelsPath_train='./TxtFiles/LabelsTrain.txt'
+    # Plot Confusion Matrix for Test
+    TestOperation(ImageSize, ModelPath, TestSet, LabelsPathPred_test,ModelNum)
+    print('Plotting Confusion Matrix for Test')
+    LabelsTrue, LabelsPred = ReadLabels(LabelsPath, LabelsPathPred_test)
+    ConfusionMatrix(LabelsTrue, LabelsPred)
 
-    # Plot Confusion Matrix
-    LabelsTrue, LabelsPred = ReadLabels(LabelsPath, LabelsPathPred)
+    # Plot Confusion Matrix for Train
+    TestOperation(ImageSize, ModelPath, TrainSet, LabelsPathPred_train,ModelNum)
+    print('Plotting Confusion Matrix for Train')
+    LabelsTrue, LabelsPred = ReadLabels(LabelsPath_train, LabelsPathPred_train)
     ConfusionMatrix(LabelsTrue, LabelsPred)
      
 if __name__ == '__main__':

@@ -59,7 +59,7 @@ class ImageClassificationBase(nn.Module):
 
 
 class CIFAR10Model(ImageClassificationBase):
-  def __init__(self, InputSize, OutputSize):
+  def __init__(self, InputSize, OutputSize, ModelNum):
       """
       Inputs: 
       InputSize - Size of the Input
@@ -69,42 +69,38 @@ class CIFAR10Model(ImageClassificationBase):
       # Fill your network initialization of choice here!
       #############################
       super().__init__()
-      self.linear1 = nn.Linear(InputSize, 1650)
-      # hidden layers
-      self.linear2 = nn.Linear(1650, 512)
-      self.linear3 = nn.Linear(512, 138)
-      # output layer
-      self.linear4 = nn.Linear(138, OutputSize)
+      if ModelNum == 0:
+        self.init_basenet()
+      # elif ModelNum == 1:
+      #   self.init_improvednet()
+      # elif ModelNum == 2:
+      #   self.init_resnet()
+      # elif ModelNum == 3:
+      #   self.init_resnext()
+      # elif ModelNum == 4:
+      #   self.init_densenet()
 
-      
+
+  def init_basenet(self):
+    self.conv1 = nn.Conv2d(3, 32, 3,1,1)
+    self.conv2 = nn.Conv2d(32, 64, 3,1,1)
+    self.maxpool= nn.MaxPool2d(2, 2)
+    self.fc1 = nn.Linear(64*8*8, 128)
+    self.fc2 = nn.Linear(128, 10)
+        
+  def basenet_forward(self, xb):
+     xb = self.conv1(xb)
+     xb = F.relu(xb)
+     xb = self.maxpool(xb)
+     xb = self.conv2(xb)
+     xb = F.relu(xb)
+     xb = self.maxpool(xb)
+     xb = xb.view(-1, 64*8*8)
+     xb = self.fc1(xb)
+     xb = self.fc2(xb)
+     return xb
+
   def forward(self, xb):
-      """
-      Input:
-      xb is a MiniBatch of the current image
-      Outputs:
-      out - output of the network
-      """
-      #############################
-      # Fill your network structure of choice here!
-      #############################
-      # Flatten images into vectors
-      out = xb.view(xb.size(0), -1)
-        # Apply layers & activation functions
-      out = self.linear1(out)
-        # Apply activation function
-      out = F.relu(out)
-        # Get intermediate outputs using hidden layer 2
-      out = self.linear2(out)
-        # Apply activation function
-      out = F.relu(out)
-        # Get predictions using output layer
-      out = self.linear3(out)
-        # Apply activation function
-      out = F.relu(out)
-        # Get predictions using output layer
-      out = self.linear4(out)
-        # Apply activation function
-      out = F.relu(out)
-     
-      return out
+    return self.basenet_forward(xb)
+       
 
