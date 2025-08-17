@@ -52,3 +52,5 @@ __pycache__/
 .DS_Store?
 ._*
 Thumbs.db
+Phase2/Code/data/cifar-10-python.tar.gz
+*.tar.gz
