@@ -107,6 +107,66 @@ class ResnetBlock(nn.Module):
         xb = self.relu(xb)
         return xb
 
+class ResnextBlock(nn.Module):
+    def __init__(self, in_channels, out_channels,initial=False):
+        super().__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.initial = initial
+        self.cardinality = 8
+        self.bottleneck= 14
+        self.intermeditate_channels= self.bottleneck * self.cardinality
+        if in_channels != out_channels and not initial:
+            self.conv1= nn.Conv2d(in_channels, self.bottleneck, 1,2)
+            self.conv2 = nn.Conv2d(self.bottleneck, self.bottleneck, 3,1,1)
+            self.conv3 = nn.Conv2d(self.intermeditate_channels, out_channels, 1,1)
+            self.conv4 = nn.Conv2d(in_channels, out_channels,1,2)
+            self.batchnorm1 = nn.BatchNorm2d(self.bottleneck)
+            self.batchnorm2 = nn.BatchNorm2d(out_channels)
+            self.relu = nn.ReLU()
+        elif initial:
+            self.conv1= nn.Conv2d(in_channels, self.bottleneck, 1)
+            self.conv2 = nn.Conv2d(self.bottleneck, self.bottleneck, 3,1,1)
+            self.conv3 = nn.Conv2d(self.intermeditate_channels, out_channels, 1,1)
+            self.conv4 = nn.Conv2d(in_channels, out_channels,1)
+            self.batchnorm1 = nn.BatchNorm2d(self.bottleneck)
+            self.batchnorm2 = nn.BatchNorm2d(out_channels)
+            self.relu = nn.ReLU()
+        else:
+            self.conv1= nn.Conv2d(in_channels, self.bottleneck, 1)
+            self.conv2 = nn.Conv2d(self.bottleneck, self.bottleneck, 3,1,1)
+            self.conv3 = nn.Conv2d(self.intermeditate_channels, out_channels, 1)
+            self.batchnorm1 = nn.BatchNorm2d(self.bottleneck)
+            self.batchnorm2 = nn.BatchNorm2d(out_channels)
+            self.relu = nn.ReLU()
+        
+    def forward(self, xb):
+      identity = xb
+      out=[]
+      inp=xb
+      for i in range(self.cardinality):
+        xb = self.conv1(inp)
+        xb = self.batchnorm1(xb)
+        xb = self.relu(xb)
+        xb = self.conv2(xb)
+        xb = self.batchnorm1(xb)
+        xb = self.relu(xb)
+        out.append(xb)
+        
+        out = torch.cat(out, dim=1)
+        out = self.conv3(out)
+        out = self.batchnorm2(out)
+
+        
+        if self.in_channels != self.out_channels or self.initial:
+            identity = self.conv4(identity)
+            identity = self.batchnorm2(identity)
+        
+        out += identity
+        out = self.relu(out)
+        return out
+
+
 
 class CIFAR10Model(ImageClassificationBase):
   def __init__(self, InputSize, OutputSize, ModelNum):
@@ -125,8 +185,8 @@ class CIFAR10Model(ImageClassificationBase):
         self.init_improvednet()
       elif ModelNum == 2:
         self.init_resnet()
-      # elif ModelNum == 3:
-      #   self.init_resnext()
+      elif ModelNum == 3:
+        self.init_resnext()
       # elif ModelNum == 4:
       #   self.init_densenet()
 
@@ -217,6 +277,45 @@ class CIFAR10Model(ImageClassificationBase):
     xb = self.fc1(xb)
     return xb
 
+
+  def init_resnext(self):
+    #initial a blocks and layers needed for resnet 50
+    self.conv1 = nn.Conv2d(3, 64, 7,2)
+    self.maxpool= nn.MaxPool2d(3, 2)
+    self.resnetblock1_d = ResnextBlock(64, 256,initial=True)
+    self.resnetblock1 = ResnextBlock(256, 256)
+    self.resnetblock2_d = ResnextBlock(256, 512)
+    self.resnetblock2 = ResnextBlock(512, 512)
+    self.resnetblock3_d = ResnextBlock(512, 1024)
+    self.resnetblock3 = ResnextBlock(1024, 1024)
+    self.resnetblock4_d = ResnextBlock(1024, 2048)
+    self.resnetblock4 = ResnextBlock(2048, 2048)
+    self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+    self.fc1 = nn.Linear(2048, 10)
+    
+  def resnext_forward(self, xb):
+    xb = self.conv1(xb)
+    xb = self.maxpool(xb)
+    xb = self.resnetblock1_d(xb)
+    for i in range(2):
+      xb = self.resnetblock1(xb)
+    xb = self.resnetblock2_d(xb)
+    for i in range(3):
+      xb = self.resnetblock2(xb)
+        
+    xb = self.resnetblock3_d(xb)
+    for i in range(5):
+      xb = self.resnetblock3(xb)
+
+    xb = self.resnetblock4_d(xb)
+    for i in range(2):
+      xb = self.resnetblock4(xb)
+
+    xb = self.avgpool(xb)
+    xb = xb.view(-1, 2048)
+    xb = self.fc1(xb)
+    return xb
+
   def forward(self, xb):
     """
     Input:
@@ -233,8 +332,8 @@ class CIFAR10Model(ImageClassificationBase):
       out = self.improvednet_forward(xb)
     elif self.ModelNum == 2:
       out = self.resnet_forward(xb)   
-    # elif self.ModelNum == 3:
-    #   out = self.resnext_forward(xb)   
+    elif self.ModelNum == 3:
+      out = self.resnext_forward(xb)   
     # elif self.ModelNum == 4:
     #   out = self.densenet_forward(xb)
         
