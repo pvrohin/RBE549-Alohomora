@@ -166,6 +166,32 @@ class ResnextBlock(nn.Module):
         out = self.relu(out)
         return out
 
+class DenseNetBlock(nn.Module):
+    def __init__(self, in_channels, out_channels,initial=False):
+        super().__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.initial = initial
+        self.conv1 = nn.Conv2d(in_channels, out_channels, 1,1)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, 3,1,1)
+        self.conv3 = nn.Conv2d(out_channels, out_channels, 1,1)
+        self.batchnorm1 = nn.BatchNorm2d(out_channels)
+        self.batchnorm2 = nn.BatchNorm2d(out_channels)
+        self.relu = nn.ReLU()
+        
+    def forward(self, xb):
+        identity = xb
+        xb = self.conv1(xb)
+        xb = self.batchnorm1(xb)
+        xb = self.relu(xb)
+        xb = self.conv2(xb)
+        xb = self.batchnorm2(xb)
+        xb = self.relu(xb)
+        xb = self.conv3(xb)
+        xb = self.batchnorm2(xb)
+        xb += identity
+        xb = self.relu(xb)
+        return xb   
 
 
 class CIFAR10Model(ImageClassificationBase):
@@ -187,8 +213,8 @@ class CIFAR10Model(ImageClassificationBase):
         self.init_resnet()
       elif ModelNum == 3:
         self.init_resnext()
-      # elif ModelNum == 4:
-      #   self.init_densenet()
+      elif ModelNum == 4:
+        self.init_densenet()
 
 
   def init_basenet(self):
@@ -316,6 +342,38 @@ class CIFAR10Model(ImageClassificationBase):
     xb = self.fc1(xb)
     return xb
 
+  def init_densenet(self):
+
+    self.conv1 = nn.Conv2d(3, 32, 3,1,1)
+    self.conv2 = nn.Conv2d(32, 64, 3,1,1)
+    self.conv3 = nn.Conv2d(64, 128, 3,1,1)
+    self.maxpool= nn.MaxPool2d(2, 2)
+    self.fc1 = nn.Linear(128*4*4, 128)
+    self.fc2 = nn.Linear(128, 10)
+    self.batchnorm1 = nn.BatchNorm2d(32)
+    self.batchnorm2 = nn.BatchNorm2d(64)
+    self.batchnorm3 = nn.BatchNorm2d(128)
+
+  def densenet_forward(self, xb):
+
+    xb = self.conv1(xb)
+    xb = self.batchnorm1(xb)
+    xb = F.relu(xb)
+    xb = self.maxpool(xb)
+    xb = self.conv2(xb)
+    xb = self.batchnorm2(xb)
+    xb = F.relu(xb)
+    xb = self.maxpool(xb)
+
+    xb = self.conv3(xb)
+    xb = self.batchnorm3(xb)
+    xb = F.relu(xb)
+    xb = self.maxpool(xb)
+    xb = xb.view(-1, 128*4*4)
+    xb = self.fc1(xb)
+    xb = self.fc2(xb)
+    return xb
+
   def forward(self, xb):
     """
     Input:
@@ -334,8 +392,8 @@ class CIFAR10Model(ImageClassificationBase):
       out = self.resnet_forward(xb)   
     elif self.ModelNum == 3:
       out = self.resnext_forward(xb)   
-    # elif self.ModelNum == 4:
-    #   out = self.densenet_forward(xb)
+    elif self.ModelNum == 4:
+      out = self.densenet_forward(xb)
         
     return out
        
