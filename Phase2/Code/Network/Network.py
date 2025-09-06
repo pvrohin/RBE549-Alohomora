@@ -205,6 +205,7 @@ class CIFAR10Model(ImageClassificationBase):
       # Fill your network initialization of choice here!
       #############################
       super().__init__()
+      self.ModelNum = ModelNum
       if ModelNum == 0:
         self.init_basenet()
       elif ModelNum == 1:
@@ -265,8 +266,8 @@ class CIFAR10Model(ImageClassificationBase):
     xb = self.fc2(xb)
     return xb
 
-  def forward(self, xb):
-    return self.improvednet_forward(xb)
+  # def forward(self, xb):
+  #   return self.improvednet_forward(xb)
 
   def init_resnet(self):
     #initial a blocks and layers needed for resnet 50

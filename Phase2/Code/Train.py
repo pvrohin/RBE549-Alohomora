@@ -151,9 +151,6 @@ def TrainOperation(TrainLabels, NumTrainSamples, ImageSize,
 
         for PerEpochCounter in tqdm(range(NumIterationsPerEpoch)):
             batch = GenerateBatch(TrainSet, TrainLabels, ImageSize, MiniBatchSize)
-
-            # data = batch[0]
-            # labels = batch[1]
             
             # outputs = model(data)
             
@@ -238,6 +235,10 @@ def main():
     TestSet = torchvision.datasets.CIFAR10(root='./data', train=False,
                                         download=True, transform=ToTensor())
 
+    #print the shape of the train and test sets
+    # print(TrainSet.shape)
+    # print(TestSet.shape)
+
     Args = Parser.parse_args()
     #BasePath = Args.BasePath
     NumEpochs = Args.NumEpochs
@@ -267,6 +268,11 @@ def main():
     SaveCheckPoint, ImageSize, NumTrainSamples, TrainLabels, NumClasses = SetupAll(BasePath,CheckPointPath)
     #DirNamesTrain, SaveCheckPoint, ImageSize, NumTrainSamples, TrainLabels, NumClasses
 
+    print(SaveCheckPoint)
+    print(ImageSize)
+    print(NumTrainSamples)
+    print(TrainLabels)
+    print(NumClasses)
 
     # Find Latest Checkpoint File
     if LoadCheckPoint==1:
